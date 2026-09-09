@@ -1,4 +1,21 @@
-# Simple Metaculus forecasting bot
+# EvidenceEdgeBot
+
+EvidenceEdgeBot is an autonomous, evidence-first forecasting bot prepared for
+the Fall 2026 FutureEval tournament. It starts from exact resolution criteria,
+researches dated and preferably authoritative sources, decomposes causal
+drivers, checks base rates and analogous questions, actively seeks
+disconfirming evidence, and aggregates several independent estimates. Binary
+forecasts are conservatively bounded to reduce damage from unsupported extreme
+probabilities.
+
+The bot is based on Metaculus's official template and remains fully autonomous
+on live tournament questions: no human reviews, approves, or adjusts its
+forecasts. Development evaluation is limited to static tests, resolved
+historical questions, and MiniBench results. See [PRECHECK.md](PRECHECK.md) for
+the opportunity and compliance review.
+
+## Upstream template documentation
+
 This repository contains a simple bot meant to get you started with creating your own bot for the AI Forecasting Tournament. Go to https://www.metaculus.com/futureeval/participate/ for more info and tournament rules (and then go to the  "Getting Started" section of our [resources](https://www.metaculus.com/notebooks/38928/ai-benchmark-resources/#want-to-join-the-ai-forecasting-benchmark) page).
 
 **Brand new to this?** You can get a working bot running in about 5 minutes without writing a single line of code — just fork this repo, paste two API keys into GitHub, and click "Run workflow". See **[Quick start](#quick-start--fork-and-use-github-actions)** below.

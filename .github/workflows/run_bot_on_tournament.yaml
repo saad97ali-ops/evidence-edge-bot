@@ -5,6 +5,9 @@ on:
   schedule:
     - cron: "7,27,47 * * * *" # every 20 min, offset off the hour. Make sure to skip already-forecasted questions!
 
+permissions:
+  contents: read
+
 # Add concurrency group to prevent parallel runs
 concurrency:
   group: ${{ github.workflow }}
@@ -37,6 +40,8 @@ jobs:
       #     key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
       - name: Install dependencies
         run: poetry install --no-interaction --no-root
+      - name: Verify tournament and strategy configuration
+        run: poetry run python -m unittest discover -s tests -v
       - name: Run bot
         run: |
           poetry run python main.py

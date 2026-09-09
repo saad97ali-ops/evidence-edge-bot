@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import logging
+import os
 from datetime import datetime, timezone
 from typing import Literal
 
@@ -45,18 +46,18 @@ dotenv.load_dotenv()
 logger = logging.getLogger(__name__)
 
 
-class SummerTemplateBot2026(ForecastBot):
+class EvidenceEdgeBot(ForecastBot):
     """
-    This is the template bot for Summer 2026 Metaculus AI Tournament.
-    This is a copy of what is used by Metaculus to run the Metac Bots in our benchmark, provided as a template for new bot makers.
+    Evidence-backed Fall 2026 bot, derived from Metaculus's official template.
+    The upstream template is the reference implementation used for MetacBots.
     This template is given as-is, and is use-at-your-own-risk.
     We have covered most test cases in forecasting-tools it may be worth double checking key components locally.
     So far our track record has been 1 mentionable bug per season (affecting forecasts for 1-2% of total questions)
 
-    Main changes since Fall:
+    Upstream template features retained:
     - Additional prompting has been added to numeric questions to emphasize putting pecentile values in the correct order.
     - Support for conditional and date questions has been added
-    - Note: Summer AIB will not use date/conditional questions, so these are only for forecasting on the main site as you wish.
+    - Date and conditional question support.
 
     The main entry point of this bot is `bot.forecast_on_tournament(tournament_id)` in the parent class.
     See the script at the bottom of the file for more details on how to run the bot.
@@ -138,10 +139,9 @@ class SummerTemplateBot2026(ForecastBot):
 
             prompt = clean_indents(
                 f"""
-                You are an assistant to a superforecaster.
-                The superforecaster will give you a question they intend to forecast on.
-                To be a great assistant, you generate a concise but detailed rundown of the most relevant news, including if the question would resolve Yes or No based on current information.
-                You do not produce forecasts yourself.
+                You are the research desk for an autonomous superforecasting system.
+                Produce a concise, source-aware briefing, not a forecast. Prioritize
+                information that can actually change the probability.
 
                 Question:
                 {question.question_text}
@@ -150,6 +150,16 @@ class SummerTemplateBot2026(ForecastBot):
                 {question.resolution_criteria}
 
                 {question.fine_print}
+
+                Research protocol:
+                1. Translate the resolution criteria into the exact observable event and deadline.
+                2. Establish the current status from recent, dated, authoritative sources.
+                3. Decompose the question into two to four causal subquestions.
+                4. Look for relevant base rates, analogous historical cases, similar
+                   Metaculus questions, and liquid prediction-market prices when available.
+                5. Seek disconfirming evidence and identify stale or conflicting sources.
+                6. End with the strongest evidence for each outcome, the largest unknowns,
+                   and source names/dates. Do not invent citations or facts.
                 """
             )
 
@@ -206,6 +216,8 @@ class SummerTemplateBot2026(ForecastBot):
             Your research assistant says:
             {research}
 
+            {self._evidence_edge_protocol()}
+
             Today is {datetime.now().strftime("%Y-%m-%d")}.
 
             Before answering you write:
@@ -236,7 +248,9 @@ class SummerTemplateBot2026(ForecastBot):
             model=self.get_llm("parser", "llm"),
             num_validation_samples=self._structure_output_validation_samples,
         )
-        decimal_pred = max(0.01, min(0.99, binary_prediction.prediction_in_decimal))
+        # The Spring 2026 bot-maker study found extremizing correlated negatively
+        # with performance. A 3% floor/ceiling limits catastrophic log-score loss.
+        decimal_pred = max(0.03, min(0.97, binary_prediction.prediction_in_decimal))
 
         logger.info(
             f"Forecasted URL {question.page_url} with prediction: {decimal_pred}."
@@ -268,6 +282,8 @@ class SummerTemplateBot2026(ForecastBot):
 
             Your research assistant says:
             {research}
+
+            {self._evidence_edge_protocol()}
 
             Today is {datetime.now().strftime("%Y-%m-%d")}.
 
@@ -345,6 +361,8 @@ class SummerTemplateBot2026(ForecastBot):
 
             Your research assistant says:
             {research}
+
+            {self._evidence_edge_protocol()}
 
             Today is {datetime.now().strftime("%Y-%m-%d")}.
 
@@ -437,6 +455,8 @@ class SummerTemplateBot2026(ForecastBot):
 
             Your research assistant says:
             {research}
+
+            {self._evidence_edge_protocol()}
 
             Today is {datetime.now().strftime("%Y-%m-%d")}.
 
@@ -645,6 +665,23 @@ class SummerTemplateBot2026(ForecastBot):
             """
         )
 
+    @staticmethod
+    def _evidence_edge_protocol() -> str:
+        """Shared discipline derived from Metaculus's Spring 2026 bot analysis."""
+        return clean_indents(
+            """
+            Forecasting protocol:
+            - Parse the resolution criteria literally before weighing evidence.
+            - Start from an outside-view base rate or the closest defensible analogue.
+            - Update for current, dated evidence; distinguish facts from assumptions.
+            - Compare against similar questions or market prices when the research provides them.
+            - Weight evidence by reliability, relevance, independence, and recency.
+            - Run a quick premortem for the leading view and reserve probability for surprise.
+            - Avoid false precision and unjustified extremity. The final distribution must
+              reflect uncertainty, not confidence in the prose.
+            """
+        )
+
 
 if __name__ == "__main__":
     logging.basicConfig(
@@ -667,35 +704,48 @@ if __name__ == "__main__":
     publish_to_metaculus = True
     print_startup_banner(run_mode, will_publish=publish_to_metaculus)
 
-    # Configure the bot. The `llms=` block below is commented out to use
-    # whichever default models forecasting-tools picks based on your env vars;
-    # uncomment and edit to pin specific models.
-    template_bot = SummerTemplateBot2026(
+    # Spring 2026 results associated a frontier GPT final model and web research
+    # with stronger performance. All defaults remain environment-overridable so
+    # the bot can adapt to the models covered by each season's donated credits.
+    forecast_model = os.getenv("FORECAST_MODEL", "openrouter/openai/gpt-5.4")
+    research_model = os.getenv(
+        "RESEARCH_MODEL", "openrouter/openai/gpt-5.4:online"
+    )
+    parser_model = os.getenv("PARSER_MODEL", "openrouter/openai/gpt-5-mini")
+
+    template_bot = EvidenceEdgeBot(
         research_reports_per_question=1,
-        predictions_per_research_report=5,
+        predictions_per_research_report=3,
         use_research_summary_to_forecast=False,
         publish_reports_to_metaculus=publish_to_metaculus,
         folder_to_save_reports_to=None,
         skip_previously_forecasted_questions=True,
         extra_metadata_in_explanation=True,
-        # llms={
-        #     "default": GeneralLlm(
-        #         model="openrouter/openai/gpt-4o",
-        #         temperature=0.3,
-        #         timeout=40,
-        #         allowed_tries=2,
-        #     ),
-        #     "summarizer": "openai/gpt-4o-mini",
-        #     "researcher": "asknews/news-summaries",
-        #     "parser": "openai/gpt-4o-mini",
-        # },
+        llms={
+            "default": GeneralLlm(
+                model=forecast_model,
+                temperature=0.2,
+                timeout=180,
+                allowed_tries=3,
+            ),
+            "researcher": GeneralLlm(
+                model=research_model,
+                temperature=0.1,
+                timeout=240,
+                allowed_tries=3,
+            ),
+            "parser": GeneralLlm(
+                model=parser_model,
+                temperature=0,
+                timeout=120,
+                allowed_tries=3,
+            ),
+        },
     )
 
-    # Per-mode tournament URL shown in the summary banner footer. These
-    # piggyback on the forecasting_tools SDK constants and need updating
-    # whenever those rotate seasons.
+    # Per-mode tournament URL shown in the summary banner footer.
     TOURNAMENT_URLS = {
-        "tournament": "https://www.metaculus.com/tournament/summer-futureeval-2026/",
+        "tournament": "https://www.metaculus.com/tournament/fall-futureeval-2026/",
         "metaculus_cup": "https://www.metaculus.com/tournament/metaculus-cup-summer-2025/",
         "test_questions": "https://www.metaculus.com/tournament/bot-testing-area/",
     }
@@ -707,7 +757,7 @@ if __name__ == "__main__":
     if run_mode == "tournament":
         seasonal_tournament_reports = asyncio.run(
             template_bot.forecast_on_tournament(
-                client.CURRENT_AI_COMPETITION_ID, return_exceptions=True
+                "fall-futureeval-2026", return_exceptions=True
             )
         )
         minibench_reports = asyncio.run(
