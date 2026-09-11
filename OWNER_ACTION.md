@@ -12,6 +12,12 @@ do not attach personal billing.
 Public deployment fork:
 <https://github.com/saad97ali-ops/evidence-edge-bot>
 
+**Deployment update — 2026-09-11:** Tested commit `9b2e252` was pushed to
+the fork's `main` branch after owner GitHub authorization. The sponsored-credit
+request is pending. Leave tournament automation disabled until the funded
+`OPENROUTER_API_KEY` has been stored as a repository secret and a controlled
+test workflow passes.
+
 ## Do now (estimated 8–12 minutes)
 
 1. Open <https://www.metaculus.com/futureeval/participate/> and sign in or create
